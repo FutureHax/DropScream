@@ -14,8 +14,6 @@ public class AccelerometerManager {
 
 	public interface AccelerometerListener {
 
-		// public void onAccelerationChanged(float x, float y, float z);
-
 		public void onDropStarted();
 
 		public void onDropStopped();
