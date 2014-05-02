@@ -12,6 +12,8 @@ import android.widget.Toast;
 
 public class AccelerometerManager {
 
+	private static float threshold = 8.0f;
+
 	public interface AccelerometerListener {
 
 		public void onDropStarted();
@@ -68,7 +70,7 @@ public class AccelerometerManager {
 				List<Sensor> sensors = sensorManager
 						.getSensorList(Sensor.TYPE_ACCELEROMETER);
 
-				supported = new Boolean(sensors.size() > 0);
+				supported = Boolean.valueOf(sensors.size() > 0);
 
 			} else {
 				supported = Boolean.FALSE;
@@ -114,24 +116,25 @@ public class AccelerometerManager {
 		private long now = 0;
 		private long timeDiff = 0;
 		private long lastUpdate = 0;
-		private long firstSteady = 0;
-		private boolean isSteady = false;
-		
+
 		private float x = 0;
 		private float y = 0;
 		private float z = 0;
-		boolean startedDrop = false;
+		private float lastX = 0;
+		private float lastY = 0;
+		private float lastZ = 0;
+		private float force = 0;
 		float[] gravity = new float[3];
 		float[] linear_acceleration = new float[3];
+		boolean dropStarted = false;
+		private boolean isSteady = false;
+		private long firstSteady = 0;
 
 		public void onAccuracyChanged(Sensor sensor, int accuracy) {
+
 		}
 
 		public void onSensorChanged(SensorEvent event) {
-			// use the event timestamp as reference
-			// so the manager precision won't depends
-			// on the AccelerometerListener implementation
-			// processing time
 			now = event.timestamp;
 
 			x = event.values[0];
@@ -148,52 +151,64 @@ public class AccelerometerManager {
 			linear_acceleration[1] = y - gravity[1];
 			linear_acceleration[2] = z - gravity[2];
 
-			// Log.d("THE X Y Z", "X = " + x + " : Y = " + y + " : Z = " + z);
-			Log.d("THE ACCELS", "X = " + linear_acceleration[0] + " : Y = "
-					+ linear_acceleration[1] + " : Z = "
-					+ linear_acceleration[2]);
-			// if not interesting in shake events
-			// just remove the whole if then else block
+			isSteady = (linear_acceleration[0] < 0)
+					&& (linear_acceleration[1] < 0 && (linear_acceleration[2] < 0))
+					&& (linear_acceleration[0] > -1)
+					&& (linear_acceleration[1] > -1 && (linear_acceleration[2] > -1));
+			
+			if (isSteady) {
+				firstSteady = now;
+			} else {
+				if (dropStarted && now - firstSteady > 1000) {
+					dropStarted = false;
+					firstSteady = 0;
+					listener.onDropStopped();
+				}
+			}
+			
 			if (lastUpdate == 0) {
 				lastUpdate = now;
+				lastX = x;
+				lastY = y;
+				lastZ = z;
 				Toast.makeText(aContext, "No Motion detected",
 						Toast.LENGTH_SHORT).show();
+
 			} else {
 				timeDiff = now - lastUpdate;
 
 				if (timeDiff > 0) {
-					if (startedDrop && linear_acceleration[1] > 0) {
-						if (isSteady && now - firstSteady > 1000) {
-							startedDrop = false;
-							listener.onDropStopped();
-							firstSteady = 0;
-							isSteady = false;
-						} else {
-							if (linear_acceleration[1] < 1) {
-								isSteady = true;
-								if (firstSteady == 0) {
-									firstSteady = now;
-								}
-							}
-						}
-					} else {
-						isSteady = false;
-						if (linear_acceleration[1] < -4) {
-							if (!startedDrop) {
-								startedDrop = true;
-								listener.onDropStarted();
-							}
-						}
+					force = Math.abs(x + y + z - lastX - lastY - lastZ);
+
+					if (!dropStarted && force > threshold // hard fall
+							&& linear_acceleration[1] > threshold // long fall
+							&& linear_acceleration[1] > linear_acceleration[0] // more
+																				// vertical
+																				// than
+																				// horizontal
+							&& linear_acceleration[1] > linear_acceleration[2]) { // more
+																					// vertical
+																					// than
+																					// the
+																					// descriptor
+																					// for
+																					// the
+																					// z
+																					// axis
+						dropStarted = true;
+						listener.onDropStarted();
 					}
-					
+					lastX = x;
+					lastY = y;
+					lastZ = z;
 					lastUpdate = now;
 				} else {
 					Toast.makeText(aContext, "No Motion detected",
 							Toast.LENGTH_SHORT).show();
+
 				}
 			}
 		}
 
 	};
-
 }
