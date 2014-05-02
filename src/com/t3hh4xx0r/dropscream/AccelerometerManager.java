@@ -7,8 +7,6 @@ import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
-import android.util.Log;
-import android.widget.Toast;
 
 public class AccelerometerManager {
 
@@ -155,7 +153,7 @@ public class AccelerometerManager {
 					&& (linear_acceleration[1] < 0 && (linear_acceleration[2] < 0))
 					&& (linear_acceleration[0] > -1)
 					&& (linear_acceleration[1] > -1 && (linear_acceleration[2] > -1));
-			
+
 			if (isSteady) {
 				firstSteady = now;
 			} else {
@@ -165,14 +163,12 @@ public class AccelerometerManager {
 					listener.onDropStopped();
 				}
 			}
-			
+
 			if (lastUpdate == 0) {
 				lastUpdate = now;
 				lastX = x;
 				lastY = y;
 				lastZ = z;
-				Toast.makeText(aContext, "No Motion detected",
-						Toast.LENGTH_SHORT).show();
 
 			} else {
 				timeDiff = now - lastUpdate;
@@ -202,10 +198,6 @@ public class AccelerometerManager {
 					lastY = y;
 					lastZ = z;
 					lastUpdate = now;
-				} else {
-					Toast.makeText(aContext, "No Motion detected",
-							Toast.LENGTH_SHORT).show();
-
 				}
 			}
 		}

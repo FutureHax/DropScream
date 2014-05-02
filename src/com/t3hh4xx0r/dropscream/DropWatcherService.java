@@ -6,6 +6,7 @@ import android.content.Intent;
 import android.content.res.AssetFileDescriptor;
 import android.media.MediaPlayer;
 import android.os.IBinder;
+import android.preference.PreferenceManager;
 import android.widget.Toast;
 
 import com.t3hh4xx0r.dropscream.AccelerometerManager.AccelerometerListener;
@@ -29,6 +30,7 @@ public class DropWatcherService extends Service implements
 	@Override
 	public void onDestroy() {
 		super.onDestroy();
+		stopScream(true);
 		if (AccelerometerManager.isListening()) {
 			AccelerometerManager.stopListening();
 		}
@@ -51,20 +53,29 @@ public class DropWatcherService extends Service implements
 
 	@Override
 	public void onDropStarted() {
-		dropCount = dropCount + 1;
+		PreferenceManager
+				.getDefaultSharedPreferences(this)
+				.edit()
+				.putInt("dropCount",
+						PreferenceManager.getDefaultSharedPreferences(this)
+								.getInt("dropCount", 0) + 1).apply();
+		dropCount = PreferenceManager.getDefaultSharedPreferences(this).getInt(
+				"dropCount", 0);
+
 		playScream();
-		Toast.makeText(this, "DROP STARTED", Toast.LENGTH_SHORT).show();
 	}
 
 	@Override
 	public void onDropStopped() {
-		Toast.makeText(this, "DROPPED " + dropCount, Toast.LENGTH_SHORT).show();
+		Toast.makeText(this, "You've dropped your device " + dropCount + " times.", Toast.LENGTH_SHORT).show();
 	}
 
-	public void stopScream() {
+	public void stopScream(boolean andRelease) {
 		try {
 			if (m.isPlaying()) {
 				m.stop();
+			}
+			if (andRelease) {
 				m.release();
 			}
 		} catch (Exception e) {
@@ -95,6 +106,9 @@ public class DropWatcherService extends Service implements
 	}
 
 	public void playScream() {
-		m.start();
+		if (PreferenceManager.getDefaultSharedPreferences(this).getBoolean(
+				"enabled", false)) {
+			m.start();
+		}
 	}
 }
